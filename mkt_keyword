@@ -1,17 +1,12 @@
 import time
-
-import openpyxl
-import selenium
+import streamlit as st
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
-from selenium.common.exceptions import UnexpectedAlertPresentException
-from selenium.webdriver.common.alert import Alert
 from selenium.common.exceptions import NoSuchElementException
-import requests
 import pandas as pd
 
 naver_shopping_url = "https://shopping.naver.com/home" # 네이버 쇼핑 사이트
@@ -53,17 +48,18 @@ for keyword in keyword_list:
     zzim_cnt = [] # 찜하기 개수
     review_cnt = [] # 리뷰 수
     sales_cnt = [] # 판매개수
+    is_ad = [] # 광고여부
 
-    #지우기!! 안돼서 테스트해본거임
-    test = driver.find_element(By.XPATH, "/html/body/div/div/div[2]/div[2]/div[3]/div[1]/div[2]/div/div[1]/div/div/div[2]/div[1]/a").text
-    print(test)
-
-"""
+    # 화면에 보이는 상품들 크롤링 시작
     for procedure in range(1, lastprod_num):
+        print(procedure)
+
         # 업체명 읽기
-        supplier.append(driver.find_element(By.XPATH, "/html/body/div/div/div[2]/div[2]/div[3]/div[1]/div[2]/div/div[{}]/div/div/div[2]/div[1]/a".format(procedure)).text)
+        supplier.append(driver.find_element(By.XPATH, "/html/body/div/div/div[2]/div[2]/div[3]/div[1]/div[2]/div/div[{}]/div/div/div[3]/div[1]/a[1]".format(procedure)).text)
+
         # 금액 읽기
         price.append(driver.find_element(By.XPATH, "/html/body/div/div/div[2]/div[2]/div[3]/div[1]/div[2]/div/div[{}]/div/div/div[2]/div[2]/strong/span[1]".format(procedure)).text)
+
         # 상품타이틀 읽기
         title.append(driver.find_element(By.XPATH, "/html/body/div/div/div[2]/div[2]/div[3]/div[1]/div[2]/div/div[{}]/div/div/div[2]/div[1]/a".format(procedure)).text)
 
@@ -80,29 +76,48 @@ for keyword in keyword_list:
         review_cnt_xpath = "/html/body/div/div/div[2]/div[2]/div[3]/div[1]/div[2]/div/div[{}]/div/div/div[2]/div[5]/a[1]/em".format(procedure)
         sales_cnt_xpath = "/html/body/div/div/div[2]/div[2]/div[3]/div[1]/div[2]/div/div[{}]/div/div/div[2]/div[5]/a[2]/span/span/em".format(procedure)
 
-        # 찜하기 개수 읽기
-        if procedure <= ad_cnt: #광고영역이면 찜하기 엘리먼트가 다르니 구분해서 크롤링
-            zzim_cnt.append(safe_find_element(driver, ad_zzim_cnt_xpath))
-        else:
-            zzim_cnt.append(safe_find_element(driver, noad_zzim_cnt_xpath))
+        # 찜하기 개수 읽기 (해보니까 광고든 아니든 2개의 엘리
+        try:
+            zzim_cnt.append(driver.find_element(By.XPATH, ad_zzim_cnt_xpath).text)
+        except:
+            zzim_cnt.append(driver.find_element(By.XPATH, noad_zzim_cnt_xpath).text)
+
         # 리뷰 수 읽기 (광고 아닌거에만 있다)
         if procedure > ad_cnt:
             review_cnt.append(safe_find_element(driver, review_cnt_xpath))
         else:
-            pass
+            review_cnt.append("-")
+
         # 구매건수 읽기 (광고 아닌거에만 있다)
         if procedure > ad_cnt:
             sales_cnt.append(safe_find_element(driver, sales_cnt_xpath))
         else:
-            pass
+            sales_cnt.append("-")
+
+        # 광고여부 표시
+        is_ad.append("광고" if procedure <= ad_cnt else "-")
+
+    print(f"업체: {len(supplier)}")
+    print(f"상품명: {len(title)}")
+    print(f"가격: {len(price)}")
+    print(f"리뷰: {len(review_cnt)}")
+    print(f"구매건수: {len(sales_cnt)}")
+    print(f"찜하기: {len(zzim_cnt)}")
 
     # 크롤링 해온 리스트들을 데이터프레임으로 만들기
-    df = {
+    df = pd.DataFrame({
         "업체" : supplier,
         "상품명" : title,
         "가격" : price,
         "리뷰" : review_cnt,
         "구매건수" : sales_cnt,
-        "찜하기" : zzim_cnt
-    }
-"""
+        "찜하기" : zzim_cnt,
+        "광고여부" : is_ad
+    })
+
+# Streamlit 앱의 타이틀 설정
+st.title('My Streamlit App')
+
+# 데이터프레임 표시
+st.write("Here is our DataFrame:")
+st.write(df)
