@@ -1,28 +1,24 @@
-import time
-import streamlit as st
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
-from bs4 import BeautifulSoup
-from selenium.common.exceptions import NoSuchElementException
-import pandas as pd
+# 전체를 함수화하고 streamlit에서 함수를 호출할 때만 실행되도록 한다.
+def run_mkt_keyword(keyword):
+    import time
+    from selenium import webdriver
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.chrome.options import Options
+    from bs4 import BeautifulSoup
+    from selenium.common.exceptions import NoSuchElementException
+    import pandas as pd
 
-naver_shopping_url = "https://shopping.naver.com/home" # 네이버 쇼핑 사이트
+    naver_shopping_url = "https://shopping.naver.com/home" # 네이버 쇼핑 사이트
 
-# 크롬 브라우저 열기
-chrome_options = Options()
-chrome_options.add_experimental_option("detach", True)
-driver = webdriver.Chrome(options=chrome_options)
-driver.maximize_window() #창 크기 최대화
-wait = WebDriverWait(driver, 10)
+    # 크롬 브라우저 열기
+    chrome_options = Options()
+    chrome_options.add_experimental_option("detach", False)
+    driver = webdriver.Chrome(options=chrome_options)
+    driver.maximize_window() #창 크기 최대화
+    wait = WebDriverWait(driver, 10)
 
-keyword_list = [] #검색할 키워드 리스트변수 할당
-
-keyword_list.append("일본 eSIM") #streamlit으로 데이터를 받아서 append 하도록 추후 변경
-
-for keyword in keyword_list:
     # 네이버 쇼핑으로 이동
     driver.get(naver_shopping_url)
     wait.until(EC.presence_of_element_located((By.XPATH, "/html/body/div[3]/div/div[1]/div/div/div/div[2]/div/div[2]/div/div[2]/form/div[1]/div/input"))) # 검색창 나올때까지 대기
@@ -31,7 +27,10 @@ for keyword in keyword_list:
     driver.find_element(By.XPATH, "/html/body/div[3]/div/div[1]/div/div/div/div[2]/div/div[2]/div/div[2]/form/div[1]/div/input").send_keys(keyword)
     # 검색버튼 클릭
     driver.find_element(By.XPATH, "/html/body/div[3]/div/div[1]/div/div/div/div[2]/div/div[2]/div/div[2]/form/div[1]/div/button[2]").click()
-    time.sleep(5)
+    time.sleep(2.5)
+
+    # 스크롤을 내려야 상품이 더 노출된다
+    driver.execute_script("window.scrollTo(0, 3000)")
 
     # 광고 개수 구하기
     hp_contents = driver.page_source # 웹페이지 내용 가져오기
@@ -97,12 +96,15 @@ for keyword in keyword_list:
         # 광고여부 표시
         is_ad.append("광고" if procedure <= ad_cnt else "-")
 
+    """
+    # 데이터프레임을 만들기 위해 모든 열의 데이터 개수가 맞는지 보는 부분
     print(f"업체: {len(supplier)}")
     print(f"상품명: {len(title)}")
     print(f"가격: {len(price)}")
     print(f"리뷰: {len(review_cnt)}")
     print(f"구매건수: {len(sales_cnt)}")
     print(f"찜하기: {len(zzim_cnt)}")
+    """
 
     # 크롤링 해온 리스트들을 데이터프레임으로 만들기
     df = pd.DataFrame({
@@ -115,9 +117,4 @@ for keyword in keyword_list:
         "광고여부" : is_ad
     })
 
-# Streamlit 앱의 타이틀 설정
-st.title('My Streamlit App')
-
-# 데이터프레임 표시
-st.write("Here is our DataFrame:")
-st.write(df)
+    return df
